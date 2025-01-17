@@ -1,0 +1,45 @@
+services:
+  signal-api:
+    image: bbernhard/signal-cli-rest-api:latest
+    restart: always
+    environment:
+      - MODE=normal
+    volumes:
+      - ./signal-cli-config:/home/.local/share/signal-cli
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/v1/about"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  ipfs:
+    image: ipfs/kubo:latest
+    restart: always
+    ports:
+      - "4001:4001"
+      - "8081:8081"
+      - "5001:5001"
+    volumes:
+      - ./ipfs_data:/data/ipfs
+    healthcheck:
+      test: ["CMD", "ipfs", "id"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  bot:
+    restart: always
+    build: .
+    env_file: .env
+    depends_on:
+      signal-api:
+        condition: service_healthy
+      ipfs:
+        condition: service_healthy
+    environment:
+      - SIGNAL_API_URL=http://signal-api:8080
+      - IPFS_API_URL=http://ipfs:5001
+    volumes:
+      - ./downloads:/app/downloads

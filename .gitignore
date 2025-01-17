@@ -1,0 +1,34 @@
+# Docker related
+docker-compose.override.yml
+docker-compose.*.yml
+!docker-compose.yml
+.env
+.env.*
+
+# Docker volumes and data directories
+data/
+volumes/
+**/docker/data/
+.docker/
+
+# Signal API specific
+.local/share/signal-cli/
+signal-cli-config/
+
+# Bot folder
+downloads/
+ipfs_data/
+
+# Docker runtime files
+*.log
+*.pid
+*.sock
+
+# Docker cache and temp files
+.docker-sync/
+docker-sync.yml
+tmp/
+
+# Pins.db
+pins.db
+
