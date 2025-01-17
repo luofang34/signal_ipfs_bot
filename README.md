@@ -37,8 +37,7 @@ signal-ipfs-bot/
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/luofang34/signal_ipfs_bot.git
-cd signal-ipfs-bot
+git clone https://github.com/luofang34/signal_ipfs_bot.git && cd signal_ipfs_bot
 ```
 
 2. Create .env file and set the following variables:
