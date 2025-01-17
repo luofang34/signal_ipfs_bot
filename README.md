@@ -17,7 +17,7 @@ signal-ipfs-bot/
 ├── Dockerfile
 ├── README.md
 ├── bot.py                   # Main bot logic
-├── docker-compose.yml       # Docker services configuration
+├── docker compose.yml       # Docker services configuration
 ├── downloads                # Downloaded files and database
 │   └── [downloaded files]
 ├── ipfs_data                # IPFS node data
@@ -48,12 +48,12 @@ echo "MONITOR_CHATS=<Signal numbers to monitor>" >> .env
 
 3. Start the services:
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 4. Follow the bot's initialization in logs:
 ```bash
-docker-compose logs -f bot
+docker compose logs -f bot
 ```
 
 5. Link your Signal device:
@@ -84,7 +84,7 @@ Use the management script to interact with the system:
 
 1. Check status of all pins:
 ```bash
-docker-compose exec bot python manage.py status
+docker compose exec bot python manage.py status
 ```
 
 2. Pin a local file:
@@ -93,17 +93,17 @@ docker-compose exec bot python manage.py status
 docker cp file.txt signal_ipfs_bot-bot-1:/app/downloads/
 
 # Pin the file
-docker-compose exec bot python manage.py pin /app/downloads/file.txt
+docker compose exec bot python manage.py pin /app/downloads/file.txt
 ```
 
 3. Extend pin duration:
 ```bash
-docker-compose exec bot python manage.py extend QmZ4tDuvesekSs4qM5ZBKpXiZGun7S2CYtEZRB3DYXkjGx 24
+docker compose exec bot python manage.py extend QmZ4tDuvesekSs4qM5ZBKpXiZGun7S2CYtEZRB3DYXkjGx 24
 ```
 
 4. Unpin a file:
 ```bash
-docker-compose exec bot python manage.py unpin QmZ4tDuvesekSs4qM5ZBKpXiZGun7S2CYtEZRB3DYXkjGx
+docker compose exec bot python manage.py unpin QmZ4tDuvesekSs4qM5ZBKpXiZGun7S2CYtEZRB3DYXkjGx
 ```
 
 ### Accessing Files
@@ -134,17 +134,17 @@ PIN_DURATION=72              # How long to keep pins (hours)
 Check service logs:
 ```bash
 # All services
-docker-compose logs -f
+docker compose logs -f
 
 # Specific service
-docker-compose logs -f bot
-docker-compose logs -f signal-api
-docker-compose logs -f ipfs
+docker compose logs -f bot
+docker compose logs -f signal-api
+docker compose logs -f ipfs
 ```
 
 View service status:
 ```bash
-docker-compose ps
+docker compose ps
 ```
 
 ## Troubleshooting
@@ -157,13 +157,13 @@ docker-compose ps
 2. IPFS Connectivity:
 ```bash
 # Connect to public IPFS nodes if needed
-docker-compose exec ipfs ipfs swarm connect /dns4/ipfs.io/tcp/4001/p2p/QmSoLer265NRgSp2LA3dPaeykiS1J6DifTC88f5uVQKNAd
+docker compose exec ipfs ipfs swarm connect /dns4/ipfs.io/tcp/4001/p2p/QmSoLer265NRgSp2LA3dPaeykiS1J6DifTC88f5uVQKNAd
 ```
 
 3. Bot Issues:
 ```bash
 # Check bot logs
-docker-compose logs bot
+docker compose logs bot
 
 # Verify database
 sqlite3 downloads/pins.db "SELECT * FROM pins;"
@@ -174,9 +174,9 @@ ls -l downloads/
 
 4. Reset Everything:
 ```bash
-docker-compose down
+docker compose down
 rm -rf downloads/* signal-cli-config/* ipfs_data/*
-docker-compose up -d
+docker compose up -d
 ```
 
 ## Contributing
