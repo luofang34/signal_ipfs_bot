@@ -178,9 +178,8 @@ async def process_message(session: aiohttp.ClientSession, envelope: dict):
     """Process a single message envelope."""
     try:
         # Extract message content from envelope
-        sync_message = envelope.get("syncMessage", {})
-        sent_message = sync_message.get("sentMessage", {})
-        content = sent_message.get("message", "")
+        data_message = envelope.get("dataMessage", {})
+        content = data_message.get("message", "")
         
         if not content:
             return
@@ -189,7 +188,7 @@ async def process_message(session: aiohttp.ClientSession, envelope: dict):
         timestamp = envelope.get("timestamp", "")
         source = envelope.get("source", "")
         msg_id = f"{source}-{timestamp}"
-        
+        logger.info(f"Message ID: {msg_id}")
         # Skip if already processed
         if msg_id in processed_messages:
             return
