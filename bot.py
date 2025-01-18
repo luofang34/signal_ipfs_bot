@@ -21,11 +21,11 @@ logger = logging.getLogger(__name__)
 # Environment variables
 SIGNAL_API_URL = os.getenv("SIGNAL_API_URL", "http://localhost:8080")
 IPFS_API_URL = os.getenv("IPFS_API_URL", "http://localhost:5001")
-MONITOR_CHATS = os.getenv("MONITOR_CHATS").split(",")
 IPFS_DOWNLOAD_DIR = os.getenv("IPFS_DOWNLOAD_DIR", "./downloads")
 FETCH_INTERVAL = int(os.getenv("FETCH_INTERVAL", "5"))
 PIN_DURATION = int(os.getenv("PIN_DURATION", "72"))  # hours
 
+SIGNAL_NUMBER = None # Will be set by get_signal_number()
 # Initialize SQLite database
 DB_PATH = os.path.join(os.path.dirname(IPFS_DOWNLOAD_DIR), 'pins.db')
 
@@ -55,6 +55,21 @@ def is_valid_cid(text: str) -> Optional[str]:
         if match:
             return match.group(0)
     return None
+
+async def get_signal_number(session: aiohttp.ClientSession) -> Optional[str]:
+    """Get the first registered Signal account number."""
+    try:
+        url = f"{SIGNAL_API_URL}/v1/accounts"
+        async with session.get(url) as response:
+            if response.status == 200:
+                data = await response.json()
+                if data and len(data) > 0:
+                    return data[0]  # Return the first number in the list
+            logger.error(f"Failed to get Signal number: {response.status}")
+            return None
+    except Exception as e:
+        logger.error(f"Error getting Signal number: {str(e)}")
+        return None
 
 async def update_pin_status(cid: str, downloaded: bool = False):
     """Update pin status in database"""
@@ -167,11 +182,34 @@ async def pin_ipfs_content(session: aiohttp.ClientSession, cid: str) -> bool:
                 logger.error(f"Failed to pin CID {cid}")
                 return False
             
-            logger.info(f"Successfully pinned {cid}")
+            logger.info(f"Successfully pinned CID: {cid}")
             return True
             
     except Exception as e:
         logger.error(f"Error pinning IPFS content: {str(e)}")
+        return False
+
+async def send_signal_message(session: aiohttp.ClientSession, recipient: str, message: str):
+    global SIGNAL_NUMBER
+    """Send a message via Signal API."""
+    try:
+        url = f"{SIGNAL_API_URL}/v2/send"
+        payload = {
+            "message": message,
+            "number": SIGNAL_NUMBER,
+            "recipients": [recipient]
+        }
+        logger.info(f"Sending message to {recipient}: {message}")
+        async with session.post(url, json=payload) as response:
+            if response.status == 200:
+                logger.info(f"Successfully sent message to {recipient}")
+                return True
+            else:
+                logger.error(f"Failed to send message: {response.status}")
+                return False
+
+    except Exception as e:
+        logger.error(f"Error sending Signal message: {str(e)}")
         return False
 
 async def process_message(session: aiohttp.ClientSession, envelope: dict):
@@ -180,15 +218,15 @@ async def process_message(session: aiohttp.ClientSession, envelope: dict):
         # Extract message content from envelope
         data_message = envelope.get("dataMessage", {})
         content = data_message.get("message", "")
+        source = envelope.get("source", "")
         
         if not content:
             return
             
         # Generate unique message ID
         timestamp = envelope.get("timestamp", "")
-        source = envelope.get("source", "")
         msg_id = f"{source}-{timestamp}"
-        logger.info(f"Message ID: {msg_id}")
+        
         # Skip if already processed
         if msg_id in processed_messages:
             return
@@ -209,23 +247,31 @@ async def process_message(session: aiohttp.ClientSession, envelope: dict):
         # Add pin record first
         await add_pin_record(cid)
         
-        # Pin the content (this starts the download in the background)
+        # Pin the content
         if await pin_ipfs_content(session, cid):
-            logger.info(f"Successfully pinned CID: {cid}")
+            
+            # Calculate expiration time
+            expire_time = (datetime.now() + timedelta(hours=PIN_DURATION)).strftime("%Y-%m-%d %H:%M:%S")
+            
+            # Send confirmation message
+            confirmation_msg = f"Successfully pinned file {cid}.\nPin will expire on {expire_time}"
+            await send_signal_message(session, source, confirmation_msg)
             
             # Start download in background without waiting
             asyncio.create_task(download_ipfs_content(session, cid))
         else:
             logger.error(f"Failed to pin CID: {cid}")
+            # Optionally send failure message
+            await send_signal_message(session, source, f"Failed to pin file {cid}")
             
     except Exception as e:
         logger.error(f"Error processing message: {str(e)}")
 
-async def fetch_messages(session: aiohttp.ClientSession, chat: str):
-    """Fetch messages from a specific Signal chat."""
+async def fetch_messages(session: aiohttp.ClientSession, number: str):
+    """Fetch messages from a specific Signal number."""
     try:
-        chat_encoded = quote(chat)
-        url = f"{SIGNAL_API_URL}/v1/receive/{chat_encoded}"
+        number_encoded = quote(number)
+        url = f"{SIGNAL_API_URL}/v1/receive/{number_encoded}"
         logger.debug(f"Fetching messages from: {url}")
         
         async with session.get(url) as response:
@@ -237,7 +283,7 @@ async def fetch_messages(session: aiohttp.ClientSession, chat: str):
                     try:
                         messages = json.loads(text)
                         if messages:
-                            logger.info(f"Received {len(messages)} messages from {chat}")
+                            logger.info(f"Received {len(messages)} messages from user {number}")
                             for msg in messages:
                                 if "envelope" in msg:
                                     await process_message(session, msg["envelope"])
@@ -247,34 +293,35 @@ async def fetch_messages(session: aiohttp.ClientSession, chat: str):
                 logger.error(f"Failed to fetch messages: {response.status}")
                 
     except Exception as e:
-        logger.error(f"Error fetching messages for {chat}: {str(e)}")
+        logger.error(f"Error fetching messages for {number}: {str(e)}")
 
 async def main():
+    global SIGNAL_NUMBER
     """Main bot loop."""
-    if not MONITOR_CHATS:
-        logger.error("No chat numbers configured to monitor!")
-        return
-        
     # Initialize database
     init_db()
     
-    logger.info(f"Starting bot with configuration:")
-    logger.info(f"Signal API URL: {SIGNAL_API_URL}")
-    logger.info(f"IPFS API URL: {IPFS_API_URL}")
-    logger.info(f"Monitoring chats: {MONITOR_CHATS}")
-    logger.info(f"Download directory: {IPFS_DOWNLOAD_DIR}")
-    logger.info(f"Fetch interval: {FETCH_INTERVAL} seconds")
-    logger.info(f"Pin duration: {PIN_DURATION} hours")
-    
     async with aiohttp.ClientSession() as session:
+        SIGNAL_NUMBER = await get_signal_number(session)
+        if not SIGNAL_NUMBER:
+            logger.error("Failed to get Signal number. Bot will not start.")
+            return
+
+        logger.info(f"Starting bot with configuration:")
+        logger.info(f"Signal number: {SIGNAL_NUMBER}")
+        logger.info(f"Signal API URL: {SIGNAL_API_URL}")
+        logger.info(f"IPFS API URL: {IPFS_API_URL}")
+        logger.info(f"Download directory: {IPFS_DOWNLOAD_DIR}")
+        logger.info(f"Fetch interval: {FETCH_INTERVAL} seconds")
+        logger.info(f"Pin duration: {PIN_DURATION} hours")
+
         while True:
             try:
                 # Clean up expired pins
                 await cleanup_expired_pins()
                 
-                # Fetch messages from all monitored chats
-                for chat in MONITOR_CHATS:
-                    await fetch_messages(session, chat)
+                # Fetch messages from Signal number
+                await fetch_messages(session, SIGNAL_NUMBER)
                     
                 # Wait before next fetch
                 await asyncio.sleep(FETCH_INTERVAL)

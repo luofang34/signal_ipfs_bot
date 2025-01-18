@@ -32,7 +32,6 @@ services:
   bot:
     restart: always
     build: .
-    env_file: .env
     depends_on:
       signal-api:
         condition: service_healthy

@@ -40,23 +40,17 @@ signal-ipfs-bot/
 git clone https://github.com/luofang34/signal_ipfs_bot.git && cd signal_ipfs_bot
 ```
 
-2. Create .env file and set the following variables:
-```bash
-echo "SIGNAL_NUMBER=<your Signal number>" >> .env
-echo "MONITOR_CHATS=<Signal numbers to monitor>" >> .env
-```
-
-3. Start the services:
+2. Start the services:
 ```bash
 docker compose up -d
 ```
 
-4. Follow the bot's initialization in logs:
+3. Follow the bot's initialization in logs:
 ```bash
 docker compose logs -f bot
 ```
 
-5. Link your Signal device:
+4. Link your Signal device:
 - open the link in your browser:
 - http://localhost:8080/v1/qrcodelink?device_name=signal-api
 - Open Signal on your phone
@@ -119,9 +113,8 @@ docker cp signal_ipfs_bot-bot-1:/app/downloads/QmHash ./
 
 ## Configuration
 
-The bot uses these environment variables (automatically configured during setup):
+The bot uses these environment variables:
 ```env
-MONITOR_CHATS=+1234567890    # Signal numbers to monitor
 SIGNAL_API_URL=http://signal-api:8080
 IPFS_API_URL=http://ipfs:5001
 DOWNLOAD_DIR=/app/downloads
@@ -182,3 +175,5 @@ docker compose up -d
 ## Contributing
 
 Feel free to open issues or submit pull requests for improvements.
+
+## License
