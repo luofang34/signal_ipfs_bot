@@ -17,7 +17,7 @@ signal-ipfs-bot/
 ├── Dockerfile
 ├── README.md
 ├── bot.py                   # Main bot logic
-├── docker compose.yml       # Docker services configuration
+├── docker-compose.yml       # Docker services configuration
 ├── downloads                # Downloaded files and database
 │   └── [downloaded files]
 ├── ipfs_data                # IPFS node data
@@ -74,7 +74,7 @@ bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi
 
 ### Managing Pins
 
-Use the management script to interact with the system:
+Use the management script to interact with the system. For environment configuration, see the [Configuration](#configuration) section:
 
 1. Check status of all pins:
 ```bash
@@ -114,7 +114,7 @@ docker cp signal_ipfs_bot-bot-1:/app/downloads/QmHash ./
 ## Configuration
 
 The bot uses these environment variables:
-```env
+```bash
 SIGNAL_API_URL=http://signal-api:8080
 IPFS_API_URL=http://ipfs:5001
 DOWNLOAD_DIR=/app/downloads
@@ -141,6 +141,8 @@ docker compose ps
 ```
 
 ## Troubleshooting
+
+For issues with initial setup, refer to the [Quick Start](#quick-start) section.
 
 1. Signal Linking Issues:
 - Ensure you use the latest Signal mobile app
@@ -174,6 +176,6 @@ docker compose up -d
 
 ## Contributing
 
-Feel free to open issues or submit pull requests for improvements.
+Feel free to open issues or submit pull requests for improvements. For common issues, check the [Troubleshooting](#troubleshooting) section first.
 
 ## License
